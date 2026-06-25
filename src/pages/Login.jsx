@@ -1,135 +1,119 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { loginUser } from "../services/authService"
+import { Alert, Button, Card, Container, Form, Spinner } from "react-bootstrap"
+import { loginUser, saveSession } from "../services/authService"
 
 function Login() {
+  const navigate = useNavigate()
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  const navigate = useNavigate()
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (event) => {
+    event.preventDefault()
     setError("")
+
+    if (!email || !password) {
+      setError("Debes completar correo y contraseña.")
+      return
+    }
+
     setLoading(true)
 
     try {
-      const result = await loginUser({ email, password })
+      const response = await loginUser({ email, password })
+      const { token, user } = response.data
 
-      if (result.token) {
-        localStorage.setItem("token", result.token)
-        // Redirigir según rol (ajustar cuando el backend devuelva el rol)
-        navigate("/user/dashboard")
+      saveSession(token, user)
+
+      if (user.role === "admin") {
+        navigate("/admin/dashboard")
+      } else if (user.role === "coach") {
+        navigate("/coach/dashboard")
       } else {
-        setError(result.message || "Credenciales incorrectas. Intenta de nuevo.")
+        navigate("/user/dashboard")
       }
     } catch (err) {
-      setError("Error al conectar con el servidor. Verifica tu conexión.")
+      setError(err.message || "Error al conectar con el servidor. Verifica tu conexión.")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-vh-100 d-flex align-items-center justify-content-center bg-light">
-      <div className="container">
-        <div className="row justify-content-center">
-          <div className="col-12 col-sm-8 col-md-6 col-lg-4">
-
-            {/* Logo / Encabezado */}
-            <div className="text-center mb-4">
-              <h2 className="fw-bold text-danger">⚽ SportClub</h2>
-              <p className="text-muted">Inicia sesión en tu cuenta</p>
-            </div>
-
-            {/* Card del formulario */}
-            <div className="card shadow-sm border-0">
-              <div className="card-body p-4">
-                <h5 className="card-title mb-4 fw-semibold">Iniciar Sesión</h5>
-
-                {/* Mensaje de error */}
-                {error && (
-                  <div className="alert alert-danger py-2" role="alert">
-                    {error}
-                  </div>
-                )}
-
-                <form onSubmit={handleSubmit}>
-                  {/* Email */}
-                  <div className="mb-3">
-                    <label htmlFor="email" className="form-label">
-                      Correo electrónico
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      className="form-control"
-                      placeholder="correo@ejemplo.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  {/* Contraseña */}
-                  <div className="mb-4">
-                    <label htmlFor="password" className="form-label">
-                      Contraseña
-                    </label>
-                    <input
-                      type="password"
-                      id="password"
-                      className="form-control"
-                      placeholder="Tu contraseña"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  {/* Botón */}
-                  <button
-                    type="submit"
-                    className="btn btn-danger w-100"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <span
-                          className="spinner-border spinner-border-sm me-2"
-                          role="status"
-                        />
-                        Ingresando...
-                      </>
-                    ) : (
-                      "Ingresar"
-                    )}
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            {/* Link a registro */}
-            <p className="text-center mt-3 text-muted">
-              ¿No tienes cuenta?{" "}
-              <Link to="/register" className="text-danger fw-semibold text-decoration-none">
-                Regístrate aquí
-              </Link>
-            </p>
-
-            {/* Link a inicio */}
-            <p className="text-center">
-              <Link to="/" className="text-muted text-decoration-none small">
-                ← Volver al inicio
-              </Link>
-            </p>
-
+    <Container
+      fluid
+      className="d-flex justify-content-center align-items-center vh-100"
+      style={{ background: "linear-gradient(135deg, #2E1A47 0%, #4A2E7A 100%)" }}
+    >
+      <Card style={{ width: "26rem" }} className="shadow-lg border-0">
+        <Card.Body className="p-4">
+          <div className="text-center mb-3">
+            <img src="/logo_empresa_letra_v1.png" alt="SportClub" style={{ height: "40px" }} />
           </div>
-        </div>
-      </div>
-    </div>
+          <Card.Title className="text-center mb-4 text-muted">
+            Inicia sesión en tu cuenta
+          </Card.Title>
+
+          {error && <Alert variant="danger">{error}</Alert>}
+
+          <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3">
+              <Form.Label>Correo electrónico</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder="correo@ejemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-4">
+              <Form.Label>Contraseña</Form.Label>
+              <Form.Control
+                type="password"
+                placeholder="Tu contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </Form.Group>
+
+            <Button
+              type="submit"
+              variant="warning"
+              className="w-100 fw-bold"
+              disabled={loading}
+              style={{ color: "#2E1A47" }}
+            >
+              {loading ? (
+                <>
+                  <Spinner size="sm" animation="border" className="me-2" />
+                  Ingresando...
+                </>
+              ) : (
+                "Ingresar"
+              )}
+            </Button>
+          </Form>
+
+          <p className="text-center mt-4 mb-1 text-muted">
+            ¿No tienes cuenta?{" "}
+            <Link to="/register" className="fw-semibold text-decoration-none">
+              Regístrate aquí
+            </Link>
+          </p>
+          <p className="text-center">
+            <Link to="/" className="text-muted text-decoration-none small">
+              ← Volver al inicio
+            </Link>
+          </p>
+        </Card.Body>
+      </Card>
+    </Container>
   )
 }
 
